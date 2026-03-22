@@ -1,5 +1,6 @@
 (ns micrograd.core
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.math :as math]))
 
 ;; Lol
 (defprotocol Valuable
@@ -82,3 +83,17 @@
     (set-backward out backward)
     out))
 
+(defn pow [x n]
+  (let [vx (to-val x)
+        out (make-value (math/pow (get-data vx) n)
+                        :op (str "^" n)
+                        :children [vx])
+        backward (fn []
+                   (inc-grad vx (* n (math/pow (get-data vx) (- n 1)) (get-grad out))))]
+    (set-backward out backward)
+    out))
+
+;; Composite operators
+(defn neg [x] (mul x -1))
+(defn sub [x y] (add x (neg y)))
+(defn div [x y] (mul x (pow y -1)))
