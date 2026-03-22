@@ -93,6 +93,17 @@
     (set-backward out backward)
     out))
 
+(defn relu [x]
+  (let [vx (to-val x)
+        vxd (get-data vx)
+        out (make-value (if (< vxd 0) 0 vxd)
+                        :op "ReLU"
+                        :children [vx])
+        backward (fn []
+                   (inc-grad vx (if (< vxd 0) 0 (get-grad out))))]
+    (set-backward out backward)
+    out))
+
 ;; Composite operators
 (defn neg [x] (mul x -1))
 (defn sub [x y] (add x (neg y)))
