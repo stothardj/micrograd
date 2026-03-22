@@ -25,18 +25,14 @@
   (get-grad [this] grad)
   (inc-grad [this n] (set! grad (+ grad n)))
   (backward [this]
-    (letfn [(build-topo [v accum visited]
+    (letfn [(build-topo [v & {:keys [accum visited] :as opts}]
               (if (visited v)
-                {:accum accum :visited visited}
+                opts
                 (->
-                 (reduce
-                  (fn [{naccum :accum nvisited :visited} nchild]
-                    (build-topo nchild naccum nvisited))
-                  {:accum accum :visited visited}
-                  (.children v))
+                 (reduce #(build-topo %2 %1) opts (.children v))
                  (update :accum #(conj % v)))))]
       (set! grad 1)
-      (doseq [v (:accum (build-topo this '() #{}))]
+      (doseq [v (:accum (build-topo this :accum '() :visited #{}))]
         (run-backward v))))
   (run-backward [this] (backward))
   (set-backward [this b] (set! backward b))
