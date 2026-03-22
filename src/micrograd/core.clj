@@ -9,6 +9,8 @@
   (get-data [this])
   (get-grad [this])
   (inc-grad [this n])
+  (backward [this])
+  (run-backward [this])
   (set-backward [this b]))
 
 ;; grad is mutable so it can be updated for each backward pass.
@@ -22,6 +24,24 @@
   (get-data [this] data)
   (get-grad [this] grad)
   (inc-grad [this n] (set! grad (+ grad n)))
+  (backward [this]
+    (letfn [(build-topo [v accum visited]
+              (if (visited v)
+                {:accum accum :visited visited}
+                (->
+                 (loop [nvisited (conj visited v)
+                        naccum accum
+                        nchild children]
+                   (if (empty? nchild)
+                     {:accum naccum :visited nvisited}
+                     (let [{naccum :accum nvisited :visited}
+                           (build-topo (first nchild) naccum nvisited)]
+                       (recur nvisited naccum (rest nchild)))))
+                 (update :accum #(conj % v)))))]
+      (set! grad 1)
+      (doseq [v (:accum (build-topo this '() #{}))]
+        (run-backward v))))
+  (run-backward [this] (backward))
   (set-backward [this b] (set! backward b))
   Object
   (toString [this] (str "Value{data: " data
@@ -59,13 +79,13 @@
   (let [vx (to-val x)
         vy (to-val y)
         out (make-value (* (get-data vx) (get-data vy))
-                :op "*" :children [vx vy])
+                        :op "*" :children [vx vy])
         backward (fn []
-                   (let [vxg (get-grad vx)
-                         vyg (get-grad vy)
+                   (let [vxd (get-data vx)
+                         vyd (get-data vy)
                          outg (get-grad out)]
-                     (inc-grad vx (* vyg outg))
-                     (inc-grad vy (* vxg outg))))]
+                     (inc-grad vx (* vyd outg))
+                     (inc-grad vy (* vxd outg))))]
     (set-backward out backward)
     out))
 
