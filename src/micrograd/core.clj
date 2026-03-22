@@ -29,14 +29,11 @@
               (if (visited v)
                 {:accum accum :visited visited}
                 (->
-                 (loop [nvisited (conj visited v)
-                        naccum accum
-                        nchild children]
-                   (if (empty? nchild)
-                     {:accum naccum :visited nvisited}
-                     (let [{naccum :accum nvisited :visited}
-                           (build-topo (first nchild) naccum nvisited)]
-                       (recur nvisited naccum (rest nchild)))))
+                 (reduce
+                  (fn [{naccum :accum nvisited :visited} nchild]
+                    (build-topo nchild naccum nvisited))
+                  {:accum accum :visited visited}
+                  (.children v))
                  (update :accum #(conj % v)))))]
       (set! grad 1)
       (doseq [v (:accum (build-topo this '() #{}))]
